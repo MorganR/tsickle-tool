@@ -200,7 +200,13 @@ export function toClosureJS(
       if (settings.verbose) {
         console.log(`Default module name: ${defaultName}`);
       }
-      if (settings.module) {
+      // Only update the module for files we are compiling, otherwise this affects other things
+      // like node modules. Paths we're compiling should be absolute paths or relative paths
+      // starting with "./".
+      if (
+        settings.module &&
+        (path.isAbsolute(fileName) || fileName.startsWith("./"))
+      ) {
         const updatedName = settings.module + "." + defaultName;
         if (settings.verbose) {
           console.log(`Updating to: ${updatedName}`);
