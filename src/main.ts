@@ -10,6 +10,8 @@ import * as tsickle from "tsickle";
 export interface Settings {
   /** Base module name to use for the root directory in goog.module exports. */
   module?: string;
+  /** key;value module renames. */
+  moduleRenames: Map<string, string>;
   /** Enable verbose debug logging. */
   verbose?: boolean;
 }
@@ -21,8 +23,9 @@ example:
   tsickle --module="my.goog.module" -- -p project/root
 
 tsickle flags are:
-  --module   Base module name to use for the root directory in goog.module exports.
-  --verbose  Enables verbose debug-logging.
+  --module, m           Base module name to use for the root directory in goog.module exports.
+  --module_renames, mr  key/value pair module renames. Can be specified multiple times.
+  --verbose             Enables verbose debug-logging.
 `);
 }
 
@@ -34,7 +37,9 @@ function loadSettingsFromArgs(args: string[]): {
   settings: Settings;
   tscArgs: string[];
 } {
-  const settings: Settings = {};
+  const settings: Settings = {
+    moduleRenames: new Map<string, string>(),
+  };
   const parsedArgs = minimist(args);
   for (const flag of Object.keys(parsedArgs)) {
     switch (flag) {
@@ -45,6 +50,11 @@ function loadSettingsFromArgs(args: string[]): {
       case "m":
       case "module":
         settings.module = parsedArgs[flag];
+        break;
+      case "mr":
+      case "module_renames":
+        const [key, value] = parsedArgs[flag].split("/");
+        settings.moduleRenames.set(key, value);
         break;
       case "v":
       case "verbose":
@@ -212,6 +222,15 @@ export function toClosureJS(
           console.log(`Updating to: ${updatedName}`);
         }
         return updatedName;
+      }
+      // Also check for literal renames.
+      for (const [key, value] of settings.moduleRenames) {
+        if (defaultName === key) {
+          if (settings.verbose) {
+            console.log(`Renaming module ${key} to ${value}`);
+          }
+          return value;
+        }
       }
       return defaultName;
     },
